@@ -4,82 +4,92 @@ use std::borrow::BorrowMut;
 
 mod tabs;
 
+use tabs::types::Tab;
+
 use tabs::first_tab::FirstTab;
 use tabs::second_tab::SecondTab;
+use tabs::third_tab::ThirdTab;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-enum CurrentTab {
-    First,
-    Second,
-}
 
-impl CurrentTab {
-    fn name(&self) -> &'static str {
-        match self {
-            CurrentTab::First => "First",
-            CurrentTab::Second => "Second",
+macro_rules! define_tabs {
+    ( $anchors:ident,
+      $instances:ident,
+        $(
+            { anchor = $anchor:ident, name = $name:expr, target = $target:ty, instance_name = $instance:ident },
+        )*
+    ) => {
+        #[derive(Copy,Clone,PartialEq,Eq)]
+        enum $anchors{
+            $($anchor,)*
+        }
+
+        impl $anchors{
+            fn name(&self) -> &'static str {
+                match self {
+                    $(
+                        Self::$anchor => $name,
+                    )*
+                }
+            }
+
+            // https://stackoverflow.com/questions/21371534/in-rust-is-there-a-way-to-iterate-through-the-values-of-an-enum
+            fn iter() -> impl Iterator<Item = Self> {
+                [$(Self::$anchor,)*].iter().copied()
+            }
+        }
+
+        /////////////////////////
+
+        struct $instances {
+            $($instance: $target,)*
+        }
+
+        impl Default for $instances {
+            fn default() -> Self {
+                Self {
+                    $($instance: <$target>::default(),)*
+                }
+            }
+        }
+
+        impl $instances {
+            fn get(&self, anchor: $anchors) -> &dyn Tab {
+                match anchor {
+                    $(
+                        $anchors::$anchor => &self.$instance,
+                    )*
+                }
+            }
+
+            fn get_mut(&mut self, anchor: $anchors) -> &mut dyn Tab {
+                match anchor {
+                    $(
+                        $anchors::$anchor => &mut self.$instance,
+                    )*
+                }
+            }
         }
     }
-
-    // https://stackoverflow.com/questions/21371534/in-rust-is-there-a-way-to-iterate-through-the-values-of-an-enum
-    fn iter() -> impl Iterator<Item = Self> {
-        [Self::First, Self::Second,].iter().copied()
-    }
 }
 
-
-
-impl Default for CurrentTab {
-    fn default() -> Self {
-        Self::First
-    }
-}
-
-struct Tabs {
-    first:    FirstTab,
-    second:   SecondTab,
-
-    selected: CurrentTab,
-}
-
-impl Default for Tabs {
-    fn default() -> Self {
-        Self {
-            first:    FirstTab::default(),
-            second:   SecondTab::default(),
-
-            selected: CurrentTab::default(),
-        }
-    }
-}
-
-impl Tabs {
-    fn current(&mut self) -> &mut dyn eframe::App {
-        match self.selected {
-            CurrentTab::First  => &mut self.first,
-            CurrentTab::Second => &mut self.second,
-        }
-    }
-
-    fn current_selected(&self) -> &CurrentTab {
-        &self.selected
-    }
-
-    fn select(&mut self, name: CurrentTab) {
-        self.selected = name;
-    }
-}
+define_tabs!(Anchors, Tabs,
+    { anchor = First,  name = "First tab" , target = FirstTab,  instance_name = first  },
+    { anchor = Second, name = "Second tab", target = SecondTab, instance_name = second },
+    { anchor = Third,  name = "Third tab" , target = ThirdTab , instance_name = third  },
+);
 
 // // // // // // // // // // // 
 
 pub struct TemplateApp {
-    tabs: Tabs,
+    tabs:        Tabs,
+    selected: Anchors,
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             tabs: Tabs::default(),
+            selected: Anchors::First,
         }
     }
 }
@@ -120,51 +130,24 @@ impl eframe::App for TemplateApp {
                 egui::widgets::global_dark_light_mode_switch(ui);
                 egui::warn_if_debug_build(ui);
                 ui.separator();
-
-                //ui.menu_button("😵 Test Menu button", |ui| {
-                //    ui.set_style(ui.ctx().style()); // ignore the "menu" style set by `menu_button`
-                //});
-
-                //ui.menu_button("👉 Test menu button", |ui| {
-                //    ui.set_style(ui.ctx().style());
-                //    ui.button("oops");
-                //});
-
-
-                //if ui.selectable_label(false, "Test").clicked() {
-                //    println!("OOps");
-                //}
             });
 
         });
 
         egui::SidePanel::left("side_panel").show(ctx, |ui| {
-            ui.heading("Side Panel");
-
+            ui.heading("Current pane");
+            ui.separator();
             ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
-                for tab in CurrentTab::iter() {
-                    if ui.selectable_label(*self.tabs.current_selected() == tab, tab.name()).clicked() {
-                        self.tabs.select(tab);
+                for tab in Anchors::iter() {
+                    if ui.selectable_label(self.selected == tab, tab.name()).clicked() {
+                        self.selected = tab
                     }
                 }
             })
-
-
-            //ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-            //    ui.horizontal(|ui| {
-            //        ui.spacing_mut().item_spacing.x = 0.0;
-            //        ui.label("powered by ");
-            //        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-            //        ui.label(" and ");
-            //        ui.hyperlink_to(
-            //            "eframe",
-            //            "https://github.com/emilk/egui/tree/master/crates/eframe",
-            //        );
-            //        ui.label(".");
-            //    });
-            //});
         });
 
-        self.tabs.current().update(ctx, frame);
+        egui::CentralPanel::default().show(ctx, |ui| {
+            self.tabs.get_mut(self.selected).update(ctx, ui);
+        });
     }
 }

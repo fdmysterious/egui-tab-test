@@ -1,5 +1,5 @@
 use egui;
-use eframe;
+use crate::app::tabs::types::Tab;
 
 pub struct FirstTab {
     value: f32,
@@ -15,24 +15,20 @@ impl Default for FirstTab {
     }
 }
 
-impl FirstTab {
-    fn name() -> &'static str {
-        "Test tab"
+impl Tab for FirstTab {
+    fn name(&self) -> &'static str {
+        "First tab"
     }
-}
 
-impl eframe::App for FirstTab {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading(format!("{} - test app", Self::name()));
-            ui.label("This is hardworking, and the first tab");
+    fn update(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+        ui.heading(format!("{} - test app", self.name()));
+        ui.label("This is hardworking, and the first tab");
 
-            ui.separator();
+        ui.separator();
 
-            ui.horizontal(|ui| {
-                ui.checkbox(&mut self.is_win_open, "Is window opened ?")
-                    .on_hover_text("Click to open window!");
-            })
+        ui.horizontal(|ui| {
+            ui.checkbox(&mut self.is_win_open, "Is window opened ?")
+                .on_hover_text("Click to open window!");
         });
 
         egui::Window::new("Window")
