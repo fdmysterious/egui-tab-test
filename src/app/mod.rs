@@ -5,22 +5,25 @@ use std::borrow::BorrowMut;
 mod tabs;
 
 use tabs::first_tab::FirstTab;
+use tabs::second_tab::SecondTab;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 enum CurrentTab {
     First,
+    Second,
 }
 
 impl CurrentTab {
     fn name(&self) -> &'static str {
         match self {
             CurrentTab::First => "First",
+            CurrentTab::Second => "Second",
         }
     }
 
     // https://stackoverflow.com/questions/21371534/in-rust-is-there-a-way-to-iterate-through-the-values-of-an-enum
     fn iter() -> impl Iterator<Item = Self> {
-        [Self::First].iter().copied()
+        [Self::First, Self::Second,].iter().copied()
     }
 }
 
@@ -34,6 +37,8 @@ impl Default for CurrentTab {
 
 struct Tabs {
     first:    FirstTab,
+    second:   SecondTab,
+
     selected: CurrentTab,
 }
 
@@ -41,6 +46,8 @@ impl Default for Tabs {
     fn default() -> Self {
         Self {
             first:    FirstTab::default(),
+            second:   SecondTab::default(),
+
             selected: CurrentTab::default(),
         }
     }
@@ -49,7 +56,8 @@ impl Default for Tabs {
 impl Tabs {
     fn current(&mut self) -> &mut dyn eframe::App {
         match self.selected {
-            CurrentTab::First => &mut self.first,
+            CurrentTab::First  => &mut self.first,
+            CurrentTab::Second => &mut self.second,
         }
     }
 
@@ -124,7 +132,7 @@ impl eframe::App for TemplateApp {
 
                 // App tabs 
                 for tab in CurrentTab::iter() {
-                    if ui.selectable_label(matches!(self.tabs.current_selected(), tab), tab.name()).clicked() {
+                    if ui.selectable_label(*self.tabs.current_selected() == tab, tab.name()).clicked() {
                         self.tabs.select(tab);
                     }
                 }
