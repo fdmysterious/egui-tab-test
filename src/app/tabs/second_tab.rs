@@ -23,8 +23,6 @@ impl eframe::App for SecondTab {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Second tab!");
-            egui::warn_if_debug_build(ui);
-
             ui.separator();
 
             ui.horizontal(|ui| {

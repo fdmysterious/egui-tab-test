@@ -26,7 +26,6 @@ impl eframe::App for FirstTab {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading(format!("{} - test app", Self::name()));
             ui.label("This is hardworking, and the first tab");
-            egui::warn_if_debug_build(ui);
 
             ui.separator();
 
